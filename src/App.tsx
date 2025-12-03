@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import CustomerLogin from "./pages/CustomerLogin";
 import Checkout from "./pages/Checkout";
 import AdminLayout from "./layouts/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
@@ -29,6 +30,7 @@ const App = () => (
               {/* Public routes */}
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/customer-login" element={<CustomerLogin />} />
               <Route path="/checkout" element={<Checkout />} />
               
               {/* Admin routes */}
