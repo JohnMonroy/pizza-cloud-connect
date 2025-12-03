@@ -42,6 +42,10 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // Polyfill for Node.js global in browser (required by amazon-cognito-identity-js)
+      window.global = window;
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
