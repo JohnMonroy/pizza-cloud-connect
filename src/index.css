@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@400;500;600&display=swap');
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+
+    --primary: 352 85% 46%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 20%;
+
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 45 100% 51%;
+    --accent-foreground: 0 0% 8%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 352 85% 46%;
+
+    --radius: 0.5rem;
+
+    /* Custom tokens - Pizza Hut inspired */
+    --pizza-red: 352 85% 46%;
+    --pizza-red-dark: 352 90% 38%;
+    --pizza-red-light: 352 80% 55%;
+    --pizza-yellow: 45 100% 51%;
+    --pizza-yellow-light: 48 100% 60%;
+    --pizza-black: 0 0% 8%;
+    --pizza-dark: 0 0% 12%;
+    --cream: 40 30% 96%;
+
+    --font-display: 'Montserrat', sans-serif;
+    --font-body: 'Open Sans', sans-serif;
+
+    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.1);
+    --shadow-elevated: 0 12px 40px -8px hsl(0 0% 0% / 0.2);
+    --shadow-glow: 0 0 40px hsl(352 85% 46% / 0.3);
+  }
+
+  .dark {
+    --background: 0 0% 8%;
+    --foreground: 0 0% 96%;
+
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 96%;
+
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 352 85% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 45 100% 51%;
+    --accent-foreground: 0 0% 8%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 352 85% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-body {
+    font-family: var(--font-body);
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+
+  .bg-dark-gradient {
+    background: linear-gradient(180deg, hsl(var(--pizza-black)) 0%, hsl(var(--pizza-dark)) 100%);
+  }
+
+  .bg-hero-overlay {
+    background: linear-gradient(180deg, hsl(0 0% 0% / 0.6) 0%, hsl(0 0% 0% / 0.8) 100%);
+  }
+
+  .bg-section-dark {
+    background: hsl(var(--pizza-black));
+  }
+
+  .bg-section-light {
+    background: hsl(var(--cream));
+  }
+}
+
+@layer components {
+  .pizza-card {
+    @apply bg-card rounded-xl overflow-hidden transition-all duration-300 border border-border;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .pizza-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground px-8 py-4 rounded-lg font-bold text-lg uppercase tracking-wide transition-all duration-300;
+  }
+
+  .btn-primary:hover {
+    @apply bg-pizza-red-dark scale-105;
+    box-shadow: var(--shadow-glow);
+  }
+
+  .btn-secondary {
+    @apply bg-accent text-accent-foreground px-8 py-4 rounded-lg font-bold text-lg uppercase tracking-wide transition-all duration-300;
+  }
+
+  .btn-secondary:hover {
+    @apply bg-pizza-yellow-light scale-105;
+  }
+
+  .btn-outline {
+    @apply bg-transparent border-2 border-primary-foreground text-primary-foreground px-8 py-4 rounded-lg font-bold text-lg uppercase tracking-wide transition-all duration-300;
+  }
+
+  .btn-outline:hover {
+    @apply bg-primary-foreground text-primary;
+  }
+
+  .section-title {
+    @apply text-4xl md:text-5xl font-black text-foreground mb-4 uppercase tracking-tight;
+  }
+
+  .section-subtitle {
+    @apply text-lg text-muted-foreground max-w-2xl mx-auto;
+  }
+}
