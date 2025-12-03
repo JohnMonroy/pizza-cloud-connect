@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MapPin, Search, AlertCircle, Navigation, Loader2 } from 'lucide-react';
+import { MapPin, Search, Navigation, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -91,15 +91,6 @@ const LocationSelector = ({ onLocationSelect }: LocationSelectorProps) => {
 
   return (
     <div className="w-full max-w-xl mx-auto">
-      {/* Alert Banner */}
-      <div className="bg-accent text-accent-foreground rounded-lg p-4 mb-6 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="font-bold text-sm">Por favor proporcione su dirección</p>
-          <p className="text-sm opacity-90">Busque y seleccione una dirección en el menú desplegable</p>
-        </div>
-      </div>
-
       {/* Address Input */}
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
