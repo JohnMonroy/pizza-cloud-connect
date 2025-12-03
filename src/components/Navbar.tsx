@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, X, Phone, Pizza, ShoppingCart } from 'lucide-react';
+import { Menu, X, Phone, Pizza, ShoppingCart, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
 
@@ -23,18 +23,13 @@ const Navbar = () => {
             <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
               <Pizza className="w-7 h-7 text-primary-foreground" />
             </div>
-            <div className="flex flex-col">
-              <span className="font-display text-xl font-black text-primary-foreground uppercase tracking-tight">
-                Pizza Hut
-              </span>
-              <span className="text-xs text-primary-foreground/60 font-medium tracking-widest uppercase">
-                Delivery
-              </span>
-            </div>
+            <span className="font-display text-xl font-black text-primary-foreground uppercase tracking-tight">
+              Pizza Hut
+            </span>
           </a>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-6">
             {navLinks.map((link) => (
               <a
                 key={link.href}
@@ -44,12 +39,17 @@ const Navbar = () => {
                 {link.label}
               </a>
             ))}
+            
+            {/* User Login Button */}
             <Link
-              to="/login"
-              className="font-display text-sm font-semibold text-primary-foreground/80 hover:text-accent uppercase tracking-wide transition-colors duration-200"
+              to="/customer-login"
+              className="w-10 h-10 bg-primary rounded flex items-center justify-center hover:bg-pizza-red-light transition-colors"
+              title="Iniciar sesión"
             >
-              Admin
+              <User className="w-5 h-5 text-primary-foreground" />
             </Link>
+
+            {/* Cart Button */}
             <button
               onClick={() => setCartOpen(true)}
               className="relative flex items-center gap-2 bg-accent text-accent-foreground px-4 py-3 rounded-lg font-bold uppercase text-sm tracking-wide hover:bg-accent/80 transition-all duration-300"
@@ -61,12 +61,14 @@ const Navbar = () => {
                 </span>
               )}
             </button>
+
+            {/* Phone Button */}
             <a
-              href="tel:+34912345678"
-              className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-bold uppercase text-sm tracking-wide hover:bg-pizza-red-light transition-all duration-300"
+              href="tel:015051111"
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-3 rounded-lg font-bold text-sm tracking-wide hover:bg-pizza-red-light transition-all duration-300"
             >
               <Phone size={18} />
-              <span>Pedir</span>
+              <span>(01)505-1111</span>
             </a>
           </div>
 
@@ -96,18 +98,26 @@ const Navbar = () => {
               </a>
             ))}
             <Link
+              to="/customer-login"
+              onClick={() => setIsOpen(false)}
+              className="font-display text-lg font-semibold text-primary-foreground/80 hover:text-accent py-2 uppercase flex items-center gap-2"
+            >
+              <User size={20} />
+              Iniciar Sesión
+            </Link>
+            <Link
               to="/login"
               onClick={() => setIsOpen(false)}
-              className="font-display text-lg font-semibold text-primary-foreground/80 hover:text-accent py-2 uppercase"
+              className="font-display text-lg font-semibold text-primary-foreground/60 hover:text-accent py-2 uppercase text-sm"
             >
               Admin
             </Link>
             <a
-              href="tel:+34912345678"
+              href="tel:015051111"
               className="flex items-center justify-center gap-2 bg-primary text-primary-foreground px-6 py-4 rounded-lg font-bold uppercase mt-2"
             >
               <Phone size={18} />
-              <span>Pedir Ahora</span>
+              <span>(01)505-1111</span>
             </a>
           </div>
         </div>

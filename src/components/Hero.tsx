@@ -1,10 +1,16 @@
 import { ChevronDown, Truck, Clock, Star } from 'lucide-react';
+import LocationSelector from './LocationSelector';
 
 interface HeroProps {
   heroImage: string;
 }
 
 const Hero = ({ heroImage }: HeroProps) => {
+  const handleLocationSelect = (address: string) => {
+    console.log('Dirección seleccionada:', address);
+    // TODO: Save address to context or state
+  };
+
   return (
     <section
       id="inicio"
@@ -27,39 +33,33 @@ const Hero = ({ heroImage }: HeroProps) => {
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
           <div 
-            className="inline-flex items-center gap-2 bg-accent text-accent-foreground px-4 py-2 rounded-full mb-8 opacity-0 animate-fade-in"
+            className="inline-flex items-center gap-2 bg-accent text-accent-foreground px-4 py-2 rounded-full mb-6 opacity-0 animate-fade-in"
             style={{ animationDelay: '0.2s' }}
           >
             <Star className="w-4 h-4 fill-current" />
-            <span className="font-bold text-sm uppercase tracking-wide">Oferta Especial</span>
+            <span className="font-bold text-sm uppercase tracking-wide">Bienvenidos a Pizza Hut</span>
           </div>
           
           <h1 
-            className="font-display text-5xl md:text-7xl lg:text-8xl font-black text-primary-foreground mb-6 opacity-0 animate-fade-in uppercase leading-tight"
+            className="font-display text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground mb-4 opacity-0 animate-fade-in uppercase leading-tight"
             style={{ animationDelay: '0.4s' }}
           >
-            <span className="text-accent">2x1</span> en Pizzas
-            <br />
-            <span className="text-primary">Todos los Martes</span>
+            Ingrese su dirección
           </h1>
           
           <p 
-            className="font-body text-xl md:text-2xl text-primary-foreground/80 mb-10 max-w-2xl mx-auto opacity-0 animate-fade-in"
+            className="font-body text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto opacity-0 animate-fade-in"
             style={{ animationDelay: '0.6s' }}
           >
-            Las mejores pizzas de la ciudad, hechas con ingredientes frescos y entregadas calientes a tu puerta
+            Para ver el menú local y las ofertas disponibles en su zona
           </p>
 
+          {/* Location Selector */}
           <div 
-            className="flex flex-col sm:flex-row gap-4 justify-center mb-16 opacity-0 animate-fade-in"
+            className="opacity-0 animate-fade-in mb-12"
             style={{ animationDelay: '0.8s' }}
           >
-            <a href="#menu" className="btn-primary animate-pulse-glow">
-              Pedir Ahora
-            </a>
-            <a href="#menu" className="btn-outline">
-              Ver Menú
-            </a>
+            <LocationSelector onLocationSelect={handleLocationSelect} />
           </div>
 
           {/* Features */}
