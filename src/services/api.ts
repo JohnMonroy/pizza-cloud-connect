@@ -1,5 +1,5 @@
 // AWS API Gateway service
-const API_BASE_URL = 'https://nr12w8k0z8.execute-api.us-east-1.amazonaws.com/dev';
+const API_BASE_URL = 'https://w7cncp3nyi.execute-api.us-east-1.amazonaws.com/prod';
 
 // AWS API response types
 export interface AWSProducto {
