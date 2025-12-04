@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CreditCard, MapPin, Phone, User } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
+import { useDelivery } from '@/contexts/DeliveryContext';
 import { toast } from '@/hooks/use-toast';
 
 const SIZE_LABELS = {
@@ -18,6 +19,7 @@ const SIZE_MULTIPLIERS = {
 
 const Checkout = () => {
   const { items, total, clearCart } = useCart();
+  const { address: savedAddress } = useDelivery();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,6 +28,13 @@ const Checkout = () => {
     address: '',
     notes: '',
   });
+
+  // Pre-fill address from delivery context
+  useEffect(() => {
+    if (savedAddress) {
+      setFormData(prev => ({ ...prev, address: savedAddress }));
+    }
+  }, [savedAddress]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
