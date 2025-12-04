@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, ChefHat, Package, Truck, CheckCircle, XCircle } from 'lucide-react';
-import { Order, OrderStatus, ORDER_STATUS_CONFIG } from '@/types/order';
-import { mockOrders } from '@/data/orders';
+import { OrderStatus, ORDER_STATUS_CONFIG } from '@/types/order';
+import { getPedidoEstado, AWSPedido, mapAWSStatusToLocal } from '@/services/api';
 
 const STATUS_STEPS: { status: OrderStatus; icon: React.ElementType; label: string }[] = [
   { status: 'pending', icon: Clock, label: 'Pendiente' },
@@ -15,36 +15,29 @@ const STATUS_STEPS: { status: OrderStatus; icon: React.ElementType; label: strin
 const OrderTracking = () => {
   const { orderNumber } = useParams<{ orderNumber: string }>();
   const navigate = useNavigate();
-  const [order, setOrder] = useState<Order | null>(null);
+  const [pedido, setPedido] = useState<AWSPedido | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadPedido = async () => {
+    if (!orderNumber) return;
+    
+    const result = await getPedidoEstado(orderNumber);
+    
+    if (result.success && result.pedido) {
+      setPedido(result.pedido);
+      setError(null);
+    } else {
+      setError(result.error || 'Pedido no encontrado');
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    // Simular carga del pedido (después conectar con API)
-    const loadOrder = () => {
-      // Buscar en localStorage primero (pedidos recientes)
-      const savedOrder = localStorage.getItem(`order_${orderNumber}`);
-      if (savedOrder) {
-        setOrder(JSON.parse(savedOrder));
-      } else {
-        // Buscar en mock orders para demo
-        const found = mockOrders.find(o => o.orderNumber === orderNumber);
-        if (found) {
-          setOrder(found);
-        }
-      }
-      setLoading(false);
-    };
+    loadPedido();
 
-    loadOrder();
-
-    // Simular actualización en tiempo real (cada 10 segundos)
-    const interval = setInterval(() => {
-      const savedOrder = localStorage.getItem(`order_${orderNumber}`);
-      if (savedOrder) {
-        setOrder(JSON.parse(savedOrder));
-      }
-    }, 5000);
-
+    // Actualizar cada 10 segundos
+    const interval = setInterval(loadPedido, 10000);
     return () => clearInterval(interval);
   }, [orderNumber]);
 
@@ -56,7 +49,7 @@ const OrderTracking = () => {
     );
   }
 
-  if (!order) {
+  if (error || !pedido) {
     return (
       <div className="min-h-screen bg-pizza-black pt-24 pb-12">
         <div className="container mx-auto px-4 text-center">
@@ -65,7 +58,7 @@ const OrderTracking = () => {
             Pedido no encontrado
           </h1>
           <p className="text-primary-foreground/70 mb-8">
-            No pudimos encontrar el pedido #{orderNumber}
+            {error || `No pudimos encontrar el pedido #${orderNumber?.slice(0, 8).toUpperCase()}`}
           </p>
           <button
             onClick={() => navigate('/')}
@@ -79,8 +72,9 @@ const OrderTracking = () => {
     );
   }
 
-  const currentStatusIndex = STATUS_STEPS.findIndex(s => s.status === order.status);
-  const isCancelled = order.status === 'cancelled';
+  const localStatus = mapAWSStatusToLocal(pedido.estado) as OrderStatus;
+  const currentStatusIndex = STATUS_STEPS.findIndex(s => s.status === localStatus);
+  const isCancelled = pedido.estado === 'CANCELADO';
 
   return (
     <div className="min-h-screen bg-pizza-black pt-24 pb-12">
@@ -98,14 +92,14 @@ const OrderTracking = () => {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="font-display text-2xl font-black text-foreground">
-                Pedido #{order.orderNumber}
+                Pedido #{pedido.pedido_id.slice(0, 8).toUpperCase()}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {new Date(order.createdAt).toLocaleString('es-ES')}
+                {new Date(pedido.fecha_pedido).toLocaleString('es-ES')}
               </p>
             </div>
-            <span className={`px-4 py-2 rounded-full text-white text-sm font-bold ${ORDER_STATUS_CONFIG[order.status].color}`}>
-              {ORDER_STATUS_CONFIG[order.status].label}
+            <span className={`px-4 py-2 rounded-full text-white text-sm font-bold ${ORDER_STATUS_CONFIG[localStatus]?.color || 'bg-gray-500'}`}>
+              {ORDER_STATUS_CONFIG[localStatus]?.label || pedido.estado}
             </span>
           </div>
         </div>
@@ -121,7 +115,7 @@ const OrderTracking = () => {
               <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-border" />
               <div 
                 className="absolute left-6 top-6 w-0.5 bg-primary transition-all duration-500"
-                style={{ height: `${(currentStatusIndex / (STATUS_STEPS.length - 1)) * 100}%` }}
+                style={{ height: `${Math.max(0, (currentStatusIndex / (STATUS_STEPS.length - 1)) * 100)}%` }}
               />
 
               {/* Steps */}
@@ -180,16 +174,16 @@ const OrderTracking = () => {
           </h2>
           
           <div className="space-y-3 mb-4">
-            {order.items.map((item, index) => (
+            {pedido.productos.map((producto, index) => (
               <div key={index} className="flex justify-between items-center py-2 border-b border-border last:border-0">
                 <div>
-                  <p className="font-medium text-foreground">{item.pizzaName}</p>
+                  <p className="font-medium text-foreground">{producto.nombre}</p>
                   <p className="text-sm text-muted-foreground">
-                    {item.size === 'small' ? 'Pequeña' : item.size === 'medium' ? 'Mediana' : 'Grande'} x{item.quantity}
+                    x{producto.cantidad}
                   </p>
                 </div>
                 <span className="font-bold text-primary">
-                  €{(item.unitPrice * item.quantity).toFixed(2)}
+                  €{(producto.precio * producto.cantidad).toFixed(2)}
                 </span>
               </div>
             ))}
@@ -198,21 +192,27 @@ const OrderTracking = () => {
           <div className="border-t border-border pt-4">
             <div className="flex justify-between items-center text-lg font-display font-bold">
               <span>Total</span>
-              <span className="text-primary">€{order.total.toFixed(2)}</span>
+              <span className="text-primary">€{pedido.total.toFixed(2)}</span>
             </div>
           </div>
 
           {/* Customer Info */}
-          <div className="mt-6 pt-4 border-t border-border text-sm text-muted-foreground space-y-1">
-            <p><span className="text-foreground font-medium">Cliente:</span> {order.customerName}</p>
-            <p><span className="text-foreground font-medium">Teléfono:</span> {order.customerPhone}</p>
-            {order.customerAddress && (
-              <p><span className="text-foreground font-medium">Dirección:</span> {order.customerAddress}</p>
-            )}
-            {order.notes && (
-              <p><span className="text-foreground font-medium">Notas:</span> {order.notes}</p>
-            )}
-          </div>
+          {(pedido.cliente_nombre || pedido.direccion) && (
+            <div className="mt-6 pt-4 border-t border-border text-sm text-muted-foreground space-y-1">
+              {pedido.cliente_nombre && (
+                <p><span className="text-foreground font-medium">Cliente:</span> {pedido.cliente_nombre}</p>
+              )}
+              {pedido.cliente_telefono && (
+                <p><span className="text-foreground font-medium">Teléfono:</span> {pedido.cliente_telefono}</p>
+              )}
+              {pedido.direccion && (
+                <p><span className="text-foreground font-medium">Dirección:</span> {pedido.direccion}</p>
+              )}
+              {pedido.notas && (
+                <p><span className="text-foreground font-medium">Notas:</span> {pedido.notas}</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
