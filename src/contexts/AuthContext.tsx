@@ -1,31 +1,33 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import {
-  CognitoUserPool,
-  CognitoUser,
-  AuthenticationDetails,
-  CognitoUserSession,
-} from 'amazon-cognito-identity-js';
-import { User, AuthState } from '@/types/auth';
-import { cognitoConfig } from '@/config/cognito';
+import { supabase } from '@/integrations/supabase/client';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: 'admin';
+}
+
+interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+}
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<{ success: boolean; newPasswordRequired?: boolean; cognitoUser?: CognitoUser; error?: string }>;
-  completeNewPassword: (newPassword: string) => Promise<boolean>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const userPool = new CognitoUserPool({
-  UserPoolId: cognitoConfig.userPoolId,
-  ClientId: cognitoConfig.clientId,
-});
-
-const mapCognitoUserToUser = (cognitoUser: CognitoUser, attributes?: Record<string, string>): User => {
+const mapSupabaseUserToUser = (supabaseUser: SupabaseUser): User => {
   return {
-    id: cognitoUser.getUsername(),
-    email: attributes?.email || cognitoUser.getUsername(),
-    name: attributes?.name || attributes?.email || cognitoUser.getUsername(),
+    id: supabaseUser.id,
+    email: supabaseUser.email || '',
+    name: supabaseUser.user_metadata?.name || supabaseUser.email || '',
     role: 'admin',
   };
 };
@@ -36,127 +38,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: false,
     isLoading: true,
   });
-  const [pendingCognitoUser, setPendingCognitoUser] = useState<CognitoUser | null>(null);
 
   useEffect(() => {
-    const currentUser = userPool.getCurrentUser();
-    
-    if (currentUser) {
-      currentUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
-        if (err || !session || !session.isValid()) {
-          setAuthState({ user: null, isAuthenticated: false, isLoading: false });
-          return;
-        }
-
-        currentUser.getUserAttributes((attrErr, attributes) => {
-          const attrs: Record<string, string> = {};
-          if (!attrErr && attributes) {
-            attributes.forEach(attr => {
-              attrs[attr.getName()] = attr.getValue();
-            });
-          }
-          
-          setAuthState({
-            user: mapCognitoUserToUser(currentUser, attrs),
-            isAuthenticated: true,
-            isLoading: false,
-          });
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setAuthState({
+          user: session?.user ? mapSupabaseUserToUser(session.user) : null,
+          isAuthenticated: !!session?.user,
+          isLoading: false,
         });
-      });
-    } else {
-      setAuthState({ user: null, isAuthenticated: false, isLoading: false });
-    }
-  }, []);
+      }
+    );
 
-  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; newPasswordRequired?: boolean; cognitoUser?: CognitoUser; error?: string }> => {
-    setAuthState(prev => ({ ...prev, isLoading: true }));
-
-    return new Promise((resolve) => {
-      const cognitoUser = new CognitoUser({
-        Username: email,
-        Pool: userPool,
-      });
-
-      const authDetails = new AuthenticationDetails({
-        Username: email,
-        Password: password,
-      });
-
-      cognitoUser.authenticateUser(authDetails, {
-        onSuccess: (session: CognitoUserSession) => {
-          cognitoUser.getUserAttributes((err, attributes) => {
-            const attrs: Record<string, string> = {};
-            if (!err && attributes) {
-              attributes.forEach(attr => {
-                attrs[attr.getName()] = attr.getValue();
-              });
-            }
-
-            setAuthState({
-              user: mapCognitoUserToUser(cognitoUser, attrs),
-              isAuthenticated: true,
-              isLoading: false,
-            });
-            resolve({ success: true });
-          });
-        },
-        onFailure: (err) => {
-          console.error('Login failed:', err.message, err.code, err.name);
-          setAuthState(prev => ({ ...prev, isLoading: false }));
-          resolve({ success: false, error: err.message || err.code || 'Error desconocido' });
-        },
-        newPasswordRequired: (userAttributes) => {
-          console.log('New password required');
-          setPendingCognitoUser(cognitoUser);
-          setAuthState(prev => ({ ...prev, isLoading: false }));
-          resolve({ success: false, newPasswordRequired: true, cognitoUser });
-        },
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthState({
+        user: session?.user ? mapSupabaseUserToUser(session.user) : null,
+        isAuthenticated: !!session?.user,
+        isLoading: false,
       });
     });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const completeNewPassword = useCallback(async (newPassword: string): Promise<boolean> => {
-    if (!pendingCognitoUser) {
-      console.error('No pending user for password change');
-      return false;
-    }
-
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setAuthState(prev => ({ ...prev, isLoading: true }));
 
-    return new Promise((resolve) => {
-      pendingCognitoUser.completeNewPasswordChallenge(newPassword, {}, {
-        onSuccess: (session: CognitoUserSession) => {
-          pendingCognitoUser.getUserAttributes((err, attributes) => {
-            const attrs: Record<string, string> = {};
-            if (!err && attributes) {
-              attributes.forEach(attr => {
-                attrs[attr.getName()] = attr.getValue();
-              });
-            }
-
-            setAuthState({
-              user: mapCognitoUserToUser(pendingCognitoUser, attrs),
-              isAuthenticated: true,
-              isLoading: false,
-            });
-            setPendingCognitoUser(null);
-            resolve(true);
-          });
-        },
-        onFailure: (err) => {
-          console.error('Password change failed:', err.message);
-          setAuthState(prev => ({ ...prev, isLoading: false }));
-          resolve(false);
-        },
-      });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
-  }, [pendingCognitoUser]);
 
-  const logout = useCallback(() => {
-    const currentUser = userPool.getCurrentUser();
-    if (currentUser) {
-      currentUser.signOut();
+    if (error) {
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+      return { success: false, error: error.message };
     }
+
+    return { success: true };
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    setAuthState(prev => ({ ...prev, isLoading: true }));
+
+    const redirectUrl = `${window.location.origin}/`;
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+      },
+    });
+
+    if (error) {
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  }, []);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setAuthState({
       user: null,
       isAuthenticated: false,
@@ -165,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...authState, login, completeNewPassword, logout }}>
+    <AuthContext.Provider value={{ ...authState, login, signUp, logout }}>
       {children}
     </AuthContext.Provider>
   );
