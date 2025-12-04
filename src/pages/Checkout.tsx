@@ -49,17 +49,44 @@ const Checkout = () => {
 
     setIsSubmitting(true);
     
-    // Simular envío del pedido (aquí se conectará con AWS)
+    // Generar número de pedido único
+    const orderNumber = `PZ-${Date.now().toString(36).toUpperCase()}`;
+    
+    // Crear el pedido
+    const newOrder = {
+      id: Date.now().toString(),
+      orderNumber,
+      items: items.map(item => ({
+        pizzaId: item.pizza.id,
+        pizzaName: item.pizza.name,
+        quantity: item.quantity,
+        size: item.size,
+        unitPrice: item.pizza.price * (item.size === 'small' ? 0.8 : item.size === 'large' ? 1.3 : 1),
+      })),
+      total,
+      status: 'pending' as const,
+      customerName: formData.name,
+      customerPhone: formData.phone,
+      customerAddress: formData.address,
+      notes: formData.notes || undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Guardar en localStorage (después conectar con API)
+    localStorage.setItem(`order_${orderNumber}`, JSON.stringify(newOrder));
+    
+    // Simular envío del pedido
     await new Promise((resolve) => setTimeout(resolve, 1500));
     
     toast({
       title: '¡Pedido realizado!',
-      description: 'Tu pedido ha sido enviado. Te contactaremos pronto.',
+      description: `Tu número de pedido es ${orderNumber}`,
     });
     
     clearCart();
     setIsSubmitting(false);
-    navigate('/');
+    navigate(`/order/${orderNumber}`);
   };
 
   if (items.length === 0) {
