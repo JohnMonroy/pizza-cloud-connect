@@ -9,7 +9,7 @@ import { User, AuthState } from '@/types/auth';
 import { cognitoConfig } from '@/config/cognito';
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<{ success: boolean; newPasswordRequired?: boolean; cognitoUser?: CognitoUser }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; newPasswordRequired?: boolean; cognitoUser?: CognitoUser; error?: string }>;
   completeNewPassword: (newPassword: string) => Promise<boolean>;
   logout: () => void;
 }
@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; newPasswordRequired?: boolean; cognitoUser?: CognitoUser }> => {
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; newPasswordRequired?: boolean; cognitoUser?: CognitoUser; error?: string }> => {
     setAuthState(prev => ({ ...prev, isLoading: true }));
 
     return new Promise((resolve) => {
@@ -101,9 +101,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         },
         onFailure: (err) => {
-          console.error('Login failed:', err.message);
+          console.error('Login failed:', err.message, err.code, err.name);
           setAuthState(prev => ({ ...prev, isLoading: false }));
-          resolve({ success: false });
+          resolve({ success: false, error: err.message || err.code || 'Error desconocido' });
         },
         newPasswordRequired: (userAttributes) => {
           console.log('New password required');

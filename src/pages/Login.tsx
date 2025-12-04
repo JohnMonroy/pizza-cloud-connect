@@ -39,7 +39,7 @@ const Login = () => {
     } else {
       toast({
         title: 'Error de acceso',
-        description: 'Email o contraseña incorrectos',
+        description: result.error || 'Email o contraseña incorrectos',
         variant: 'destructive',
       });
     }
