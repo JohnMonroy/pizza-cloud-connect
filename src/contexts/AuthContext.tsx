@@ -9,7 +9,8 @@ import { User, AuthState } from '@/types/auth';
 import { cognitoConfig } from '@/config/cognito';
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{ success: boolean; newPasswordRequired?: boolean; cognitoUser?: CognitoUser }>;
+  completeNewPassword: (newPassword: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -25,7 +26,7 @@ const mapCognitoUserToUser = (cognitoUser: CognitoUser, attributes?: Record<stri
     id: cognitoUser.getUsername(),
     email: attributes?.email || cognitoUser.getUsername(),
     name: attributes?.name || attributes?.email || cognitoUser.getUsername(),
-    role: 'admin', // You can map this from a custom Cognito attribute
+    role: 'admin',
   };
 };
 
@@ -35,8 +36,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: false,
     isLoading: true,
   });
+  const [pendingCognitoUser, setPendingCognitoUser] = useState<CognitoUser | null>(null);
 
-  // Check for existing session on mount
   useEffect(() => {
     const currentUser = userPool.getCurrentUser();
     
@@ -67,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; newPasswordRequired?: boolean; cognitoUser?: CognitoUser }> => {
     setAuthState(prev => ({ ...prev, isLoading: true }));
 
     return new Promise((resolve) => {
@@ -96,23 +97,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               isAuthenticated: true,
               isLoading: false,
             });
-            resolve(true);
+            resolve({ success: true });
           });
         },
         onFailure: (err) => {
           console.error('Login failed:', err.message);
           setAuthState(prev => ({ ...prev, isLoading: false }));
-          resolve(false);
+          resolve({ success: false });
         },
-        newPasswordRequired: () => {
-          // Handle new password requirement if needed
+        newPasswordRequired: (userAttributes) => {
           console.log('New password required');
+          setPendingCognitoUser(cognitoUser);
+          setAuthState(prev => ({ ...prev, isLoading: false }));
+          resolve({ success: false, newPasswordRequired: true, cognitoUser });
+        },
+      });
+    });
+  }, []);
+
+  const completeNewPassword = useCallback(async (newPassword: string): Promise<boolean> => {
+    if (!pendingCognitoUser) {
+      console.error('No pending user for password change');
+      return false;
+    }
+
+    setAuthState(prev => ({ ...prev, isLoading: true }));
+
+    return new Promise((resolve) => {
+      pendingCognitoUser.completeNewPasswordChallenge(newPassword, {}, {
+        onSuccess: (session: CognitoUserSession) => {
+          pendingCognitoUser.getUserAttributes((err, attributes) => {
+            const attrs: Record<string, string> = {};
+            if (!err && attributes) {
+              attributes.forEach(attr => {
+                attrs[attr.getName()] = attr.getValue();
+              });
+            }
+
+            setAuthState({
+              user: mapCognitoUserToUser(pendingCognitoUser, attrs),
+              isAuthenticated: true,
+              isLoading: false,
+            });
+            setPendingCognitoUser(null);
+            resolve(true);
+          });
+        },
+        onFailure: (err) => {
+          console.error('Password change failed:', err.message);
           setAuthState(prev => ({ ...prev, isLoading: false }));
           resolve(false);
         },
       });
     });
-  }, []);
+  }, [pendingCognitoUser]);
 
   const logout = useCallback(() => {
     const currentUser = userPool.getCurrentUser();
@@ -127,7 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...authState, login, logout }}>
+    <AuthContext.Provider value={{ ...authState, login, completeNewPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );
