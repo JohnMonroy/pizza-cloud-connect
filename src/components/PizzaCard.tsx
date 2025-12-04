@@ -5,12 +5,14 @@ import { useCart } from '@/contexts/CartContext';
 interface PizzaCardProps {
   pizza: Pizza;
   image: string;
+  disabled?: boolean;
 }
 
-const PizzaCard = ({ pizza, image }: PizzaCardProps) => {
+const PizzaCard = ({ pizza, image, disabled = false }: PizzaCardProps) => {
   const { addItem } = useCart();
 
   const handleAddToCart = () => {
+    if (disabled) return;
     addItem(pizza, image, 'medium');
   };
 
@@ -56,7 +58,10 @@ const PizzaCard = ({ pizza, image }: PizzaCardProps) => {
 
         <button
           onClick={handleAddToCart}
-          className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-lg font-bold uppercase text-sm tracking-wide transition-all duration-300 hover:bg-pizza-red-dark"
+          disabled={disabled}
+          className={`w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-lg font-bold uppercase text-sm tracking-wide transition-all duration-300 hover:bg-pizza-red-dark ${
+            disabled ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
         >
           <Plus className="w-5 h-5" />
           Añadir
