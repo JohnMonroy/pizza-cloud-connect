@@ -1,24 +1,66 @@
 import { useState } from 'react';
-import { MapPin, Search, Navigation, Loader2 } from 'lucide-react';
+import { Search, Navigation, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import AddressMap from './AddressMap';
 
 interface LocationSelectorProps {
   onLocationSelect?: (address: string) => void;
+  onLocationConfirmed?: (address: string) => void;
 }
 
-const LocationSelector = ({ onLocationSelect }: LocationSelectorProps) => {
+interface GeocodedLocation {
+  lat: number;
+  lng: number;
+  address: string;
+}
+
+const LocationSelector = ({ onLocationSelect, onLocationConfirmed }: LocationSelectorProps) => {
   const [address, setAddress] = useState('');
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [geocodedLocation, setGeocodedLocation] = useState<GeocodedLocation | null>(null);
+  const [showMap, setShowMap] = useState(false);
   const { toast } = useToast();
 
-  const handleSearch = () => {
-    if (address.trim()) {
-      onLocationSelect?.(address);
+  const geocodeAddress = async (searchAddress: string): Promise<GeocodedLocation | null> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchAddress)}&limit=1`
+      );
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+          address: data[0].display_name,
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      return null;
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!address.trim()) return;
+    
+    setIsSearching(true);
+    const location = await geocodeAddress(address);
+    setIsSearching(false);
+    
+    if (location) {
+      setGeocodedLocation(location);
+      setShowMap(true);
+      onLocationSelect?.(location.address);
+    } else {
       toast({
-        title: '¡Dirección guardada!',
-        description: `Entregaremos a: ${address}`,
+        title: 'Dirección no encontrada',
+        description: 'No pudimos encontrar esa dirección. Intenta con otra.',
+        variant: 'destructive',
       });
     }
   };
@@ -40,25 +82,35 @@ const LocationSelector = ({ onLocationSelect }: LocationSelectorProps) => {
         const { latitude, longitude } = position.coords;
         
         try {
-          // Use reverse geocoding to get address from coordinates
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
           );
           const data = await response.json();
           
           const displayAddress = data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+          
+          setGeocodedLocation({
+            lat: latitude,
+            lng: longitude,
+            address: displayAddress,
+          });
           setAddress(displayAddress);
+          setShowMap(true);
           onLocationSelect?.(displayAddress);
           
           toast({
             title: '¡Ubicación encontrada!',
-            description: 'Hemos detectado tu ubicación actual',
+            description: 'Confirma tu ubicación en el mapa',
           });
         } catch (error) {
-          // Fallback to coordinates if reverse geocoding fails
           const coordsAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+          setGeocodedLocation({
+            lat: latitude,
+            lng: longitude,
+            address: coordsAddress,
+          });
           setAddress(coordsAddress);
-          onLocationSelect?.(coordsAddress);
+          setShowMap(true);
         }
         
         setIsLoadingLocation(false);
@@ -89,6 +141,33 @@ const LocationSelector = ({ onLocationSelect }: LocationSelectorProps) => {
     );
   };
 
+  const handleMapConfirm = (lat: number, lng: number, confirmedAddress: string) => {
+    setShowMap(false);
+    setAddress(confirmedAddress);
+    onLocationConfirmed?.(confirmedAddress);
+    toast({
+      title: '¡Dirección confirmada!',
+      description: 'Ya puedes agregar productos al carrito',
+    });
+  };
+
+  const handleMapCancel = () => {
+    setShowMap(false);
+    setGeocodedLocation(null);
+  };
+
+  if (showMap && geocodedLocation) {
+    return (
+      <AddressMap
+        latitude={geocodedLocation.lat}
+        longitude={geocodedLocation.lng}
+        address={geocodedLocation.address}
+        onConfirm={handleMapConfirm}
+        onCancel={handleMapCancel}
+      />
+    );
+  }
+
   return (
     <div className="w-full max-w-xl mx-auto">
       {/* Address Input */}
@@ -105,10 +184,17 @@ const LocationSelector = ({ onLocationSelect }: LocationSelectorProps) => {
         </div>
         <Button 
           onClick={handleSearch}
+          disabled={isSearching}
           className="h-14 px-6 bg-primary hover:bg-pizza-red-dark text-primary-foreground font-bold rounded-lg"
         >
-          <Search className="w-5 h-5 mr-2" />
-          Buscar
+          {isSearching ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <>
+              <Search className="w-5 h-5 mr-2" />
+              Buscar
+            </>
+          )}
         </Button>
       </div>
 
