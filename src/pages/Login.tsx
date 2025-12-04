@@ -5,81 +5,61 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Pizza, Lock, Mail, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { Pizza, Lock, Mail, Eye, EyeOff, UserPlus } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [requiresNewPassword, setRequiresNewPassword] = useState(false);
-  const { login, completeNewPassword, isLoading } = useAuth();
+  const [isSignUp, setIsSignUp] = useState(false);
+  const { login, signUp, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const result = await login(email, password);
-    
-    if (result.success) {
-      toast({
-        title: '¡Bienvenido!',
-        description: 'Has iniciado sesión correctamente',
-      });
-      navigate('/admin');
-    } else if (result.newPasswordRequired) {
-      setRequiresNewPassword(true);
-      toast({
-        title: 'Cambio de contraseña requerido',
-        description: 'Debes establecer una nueva contraseña',
-      });
+    if (isSignUp) {
+      if (password.length < 6) {
+        toast({
+          title: 'Error',
+          description: 'La contraseña debe tener al menos 6 caracteres',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const result = await signUp(email, password);
+      
+      if (result.success) {
+        toast({
+          title: '¡Cuenta creada!',
+          description: 'Has sido registrado correctamente',
+        });
+        navigate('/admin');
+      } else {
+        toast({
+          title: 'Error de registro',
+          description: result.error || 'No se pudo crear la cuenta',
+          variant: 'destructive',
+        });
+      }
     } else {
-      toast({
-        title: 'Error de acceso',
-        description: result.error || 'Email o contraseña incorrectos',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleNewPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Las contraseñas no coinciden',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      toast({
-        title: 'Error',
-        description: 'La contraseña debe tener al menos 8 caracteres',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const success = await completeNewPassword(newPassword);
-    
-    if (success) {
-      toast({
-        title: '¡Contraseña actualizada!',
-        description: 'Has iniciado sesión correctamente',
-      });
-      navigate('/admin');
-    } else {
-      toast({
-        title: 'Error',
-        description: 'No se pudo cambiar la contraseña. Asegúrate de incluir mayúsculas, minúsculas, números y símbolos.',
-        variant: 'destructive',
-      });
+      const result = await login(email, password);
+      
+      if (result.success) {
+        toast({
+          title: '¡Bienvenido!',
+          description: 'Has iniciado sesión correctamente',
+        });
+        navigate('/admin');
+      } else {
+        toast({
+          title: 'Error de acceso',
+          description: result.error || 'Email o contraseña incorrectos',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -106,139 +86,79 @@ const Login = () => {
 
         {/* Login Card */}
         <div className="bg-pizza-dark rounded-2xl p-8 shadow-2xl border border-primary-foreground/10">
-          {!requiresNewPassword ? (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-primary-foreground/80 text-sm font-bold uppercase tracking-wide">
-                  Email
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/40" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="admin@pizzahut.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-11 bg-pizza-black border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40 focus:border-primary focus:ring-primary h-12 rounded-lg"
-                    required
-                  />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-primary-foreground/80 text-sm font-bold uppercase tracking-wide">
+                Email
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/40" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@pizzahut.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-11 bg-pizza-black border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40 focus:border-primary focus:ring-primary h-12 rounded-lg"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-primary-foreground/80 text-sm font-bold uppercase tracking-wide">
+                Contraseña
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/40" />
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-11 pr-11 bg-pizza-black border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40 focus:border-primary focus:ring-primary h-12 rounded-lg"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-foreground/40 hover:text-primary-foreground/60 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-primary hover:bg-pizza-red-dark text-primary-foreground font-bold py-6 text-lg rounded-lg uppercase tracking-wide transition-all hover:scale-[1.02]"
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  {isSignUp ? 'Registrando...' : 'Accediendo...'}
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-primary-foreground/80 text-sm font-bold uppercase tracking-wide">
-                  Contraseña
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/40" />
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-11 pr-11 bg-pizza-black border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40 focus:border-primary focus:ring-primary h-12 rounded-lg"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-foreground/40 hover:text-primary-foreground/60 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
+              ) : (
+                <div className="flex items-center gap-2 justify-center">
+                  {isSignUp ? <UserPlus className="w-5 h-5" /> : null}
+                  {isSignUp ? 'Crear Cuenta' : 'Acceder'}
                 </div>
-              </div>
+              )}
+            </Button>
+          </form>
 
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-primary hover:bg-pizza-red-dark text-primary-foreground font-bold py-6 text-lg rounded-lg uppercase tracking-wide transition-all hover:scale-[1.02]"
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    Accediendo...
-                  </div>
-                ) : (
-                  'Acceder'
-                )}
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleNewPasswordSubmit} className="space-y-6">
-              <div className="text-center mb-4">
-                <KeyRound className="w-12 h-12 text-primary mx-auto mb-2" />
-                <h2 className="text-xl font-bold text-primary-foreground">Nueva Contraseña</h2>
-                <p className="text-primary-foreground/60 text-sm mt-1">
-                  Establece una nueva contraseña para continuar
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newPassword" className="text-primary-foreground/80 text-sm font-bold uppercase tracking-wide">
-                  Nueva Contraseña
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/40" />
-                  <Input
-                    id="newPassword"
-                    type={showNewPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="pl-11 pr-11 bg-pizza-black border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40 focus:border-primary focus:ring-primary h-12 rounded-lg"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-foreground/40 hover:text-primary-foreground/60 transition-colors"
-                  >
-                    {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-primary-foreground/80 text-sm font-bold uppercase tracking-wide">
-                  Confirmar Contraseña
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/40" />
-                  <Input
-                    id="confirmPassword"
-                    type={showNewPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-11 bg-pizza-black border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40 focus:border-primary focus:ring-primary h-12 rounded-lg"
-                    required
-                  />
-                </div>
-              </div>
-
-              <p className="text-primary-foreground/50 text-xs">
-                La contraseña debe incluir: mayúsculas, minúsculas, números y símbolos (!@#$%)
-              </p>
-
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-primary hover:bg-pizza-red-dark text-primary-foreground font-bold py-6 text-lg rounded-lg uppercase tracking-wide transition-all hover:scale-[1.02]"
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    Guardando...
-                  </div>
-                ) : (
-                  'Establecer Contraseña'
-                )}
-              </Button>
-            </form>
-          )}
+          {/* Toggle Sign Up / Login */}
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-primary-foreground/60 hover:text-accent transition-colors text-sm"
+            >
+              {isSignUp ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}
+            </button>
+          </div>
         </div>
 
         {/* Back to site */}
