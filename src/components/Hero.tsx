@@ -1,14 +1,28 @@
-import { ChevronDown, Truck, Clock, Star } from 'lucide-react';
+import { ChevronDown, Truck, Clock, Star, MapPin, CheckCircle } from 'lucide-react';
 import LocationSelector from './LocationSelector';
+import { useDelivery } from '@/contexts/DeliveryContext';
+import { Button } from './ui/button';
 
 interface HeroProps {
   heroImage: string;
 }
 
 const Hero = ({ heroImage }: HeroProps) => {
-  const handleLocationSelect = (address: string) => {
-    console.log('Dirección seleccionada:', address);
-    // TODO: Save address to context or state
+  const { address, isLocationConfirmed, setDeliveryAddress, clearAddress } = useDelivery();
+
+  const handleLocationSelect = (selectedAddress: string) => {
+    console.log('Dirección seleccionada:', selectedAddress);
+  };
+
+  const handleLocationConfirmed = (confirmedAddress: string) => {
+    setDeliveryAddress(confirmedAddress);
+    // Scroll to menu section after confirming
+    setTimeout(() => {
+      const menuSection = document.getElementById('menu');
+      if (menuSection) {
+        menuSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 300);
   };
 
   return (
@@ -40,31 +54,80 @@ const Hero = ({ heroImage }: HeroProps) => {
             <span className="font-bold text-sm uppercase tracking-wide">Bienvenidos a Pizza Hut</span>
           </div>
           
-          <h1 
-            className="font-display text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground mb-4 opacity-0 animate-fade-in uppercase leading-tight"
-            style={{ animationDelay: '0.4s' }}
-          >
-            Ingrese su dirección
-          </h1>
-          
-          <p 
-            className="font-body text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto opacity-0 animate-fade-in"
-            style={{ animationDelay: '0.6s' }}
-          >
-            Para ver el menú local y las ofertas disponibles en su zona
-          </p>
+          {isLocationConfirmed ? (
+            // Show confirmed location
+            <>
+              <h1 
+                className="font-display text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground mb-4 opacity-0 animate-fade-in uppercase leading-tight"
+                style={{ animationDelay: '0.4s' }}
+              >
+                ¡Listo para ordenar!
+              </h1>
+              
+              <div 
+                className="bg-card/90 backdrop-blur-sm rounded-xl p-6 max-w-xl mx-auto mb-8 opacity-0 animate-fade-in"
+                style={{ animationDelay: '0.6s' }}
+              >
+                <div className="flex items-center justify-center gap-2 text-green-500 mb-3">
+                  <CheckCircle className="w-6 h-6" />
+                  <span className="font-bold">Ubicación confirmada</span>
+                </div>
+                <div className="flex items-start gap-2 text-muted-foreground">
+                  <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0 text-primary" />
+                  <p className="text-sm text-left">{address}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAddress}
+                  className="mt-4"
+                >
+                  Cambiar dirección
+                </Button>
+              </div>
 
-          {/* Location Selector */}
-          <div 
-            className="opacity-0 animate-fade-in mb-12"
-            style={{ animationDelay: '0.8s' }}
-          >
-            <LocationSelector onLocationSelect={handleLocationSelect} />
-          </div>
+              <a
+                href="#menu"
+                className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-lg font-bold text-lg transition-all opacity-0 animate-fade-in"
+                style={{ animationDelay: '0.8s' }}
+              >
+                Ver Menú
+                <ChevronDown className="w-5 h-5" />
+              </a>
+            </>
+          ) : (
+            // Show location selector
+            <>
+              <h1 
+                className="font-display text-4xl md:text-6xl lg:text-7xl font-black text-primary-foreground mb-4 opacity-0 animate-fade-in uppercase leading-tight"
+                style={{ animationDelay: '0.4s' }}
+              >
+                Ingrese su dirección
+              </h1>
+              
+              <p 
+                className="font-body text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto opacity-0 animate-fade-in"
+                style={{ animationDelay: '0.6s' }}
+              >
+                Para ver el menú local y las ofertas disponibles en su zona
+              </p>
+
+              {/* Location Selector */}
+              <div 
+                className="opacity-0 animate-fade-in mb-12"
+                style={{ animationDelay: '0.8s' }}
+              >
+                <LocationSelector 
+                  onLocationSelect={handleLocationSelect}
+                  onLocationConfirmed={handleLocationConfirmed}
+                />
+              </div>
+            </>
+          )}
 
           {/* Features */}
           <div 
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 opacity-0 animate-fade-in"
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 opacity-0 animate-fade-in mt-8"
             style={{ animationDelay: '1s' }}
           >
             <div className="flex items-center justify-center gap-3 text-primary-foreground/80">
@@ -99,11 +162,13 @@ const Hero = ({ heroImage }: HeroProps) => {
       </div>
 
       {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <a href="#menu" className="text-primary-foreground/60 hover:text-primary transition-colors">
-          <ChevronDown size={40} />
-        </a>
-      </div>
+      {isLocationConfirmed && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+          <a href="#menu" className="text-primary-foreground/60 hover:text-primary transition-colors">
+            <ChevronDown size={40} />
+          </a>
+        </div>
+      )}
     </section>
   );
 };
