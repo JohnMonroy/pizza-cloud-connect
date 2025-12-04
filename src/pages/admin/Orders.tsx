@@ -1,71 +1,92 @@
 import { useState, useEffect } from 'react';
-import { mockOrders } from '@/data/orders';
 import { Order, ORDER_STATUS_CONFIG, OrderStatus } from '@/types/order';
 import OrderCard from '@/components/admin/OrderCard';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Pizza } from 'lucide-react';
+import { Pizza, RefreshCw } from 'lucide-react';
+import { getPedidosActivos, updatePedidoEstado, AWSPedido, mapAWSStatusToLocal } from '@/services/api';
+
+// Convert AWS pedido to local Order format
+const mapAWSPedidoToOrder = (pedido: AWSPedido): Order => ({
+  id: pedido.pedido_id,
+  orderNumber: pedido.pedido_id.slice(0, 8).toUpperCase(),
+  items: pedido.productos.map(p => ({
+    pizzaId: p.producto_id,
+    pizzaName: p.nombre,
+    quantity: p.cantidad,
+    size: 'medium' as const,
+    unitPrice: p.precio,
+  })),
+  total: pedido.total,
+  status: mapAWSStatusToLocal(pedido.estado) as OrderStatus,
+  customerName: pedido.cliente_nombre || 'Cliente',
+  customerPhone: pedido.cliente_telefono || '',
+  customerAddress: pedido.direccion,
+  notes: pedido.notas,
+  createdAt: pedido.fecha_pedido,
+  updatedAt: pedido.fecha_pedido,
+});
 
 const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { toast } = useToast();
 
-  // Cargar pedidos de localStorage y mock
-  useEffect(() => {
-    const loadOrders = () => {
-      const localOrders: Order[] = [];
-      
-      // Buscar todos los pedidos en localStorage
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('order_')) {
-          try {
-            const order = JSON.parse(localStorage.getItem(key) || '');
-            localOrders.push(order);
-          } catch (e) {
-            console.error('Error parsing order:', e);
-          }
-        }
-      }
-      
-      // Combinar con mock orders (evitar duplicados)
-      const allOrders = [...localOrders];
-      mockOrders.forEach(mockOrder => {
-        if (!allOrders.find(o => o.orderNumber === mockOrder.orderNumber)) {
-          allOrders.push(mockOrder);
-        }
+  const loadOrders = async (showRefresh = false) => {
+    if (showRefresh) setRefreshing(true);
+    
+    const result = await getPedidosActivos();
+    
+    if (result.success && result.pedidos) {
+      const mappedOrders = result.pedidos.map(mapAWSPedidoToOrder);
+      setOrders(mappedOrders);
+    } else {
+      toast({
+        title: 'Error',
+        description: result.error || 'No se pudieron cargar los pedidos',
+        variant: 'destructive',
       });
-      
-      setOrders(allOrders);
-    };
+    }
+    
+    setLoading(false);
+    setRefreshing(false);
+  };
 
+  useEffect(() => {
     loadOrders();
     
-    // Actualizar cada 5 segundos para ver nuevos pedidos
-    const interval = setInterval(loadOrders, 5000);
+    // Actualizar cada 15 segundos
+    const interval = setInterval(() => loadOrders(), 15000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-    setOrders(prev => {
-      const updatedOrders = prev.map(order => {
-        if (order.id === orderId) {
-          const updatedOrder = { ...order, status: newStatus, updatedAt: new Date().toISOString() };
-          // Actualizar en localStorage para que el cliente vea el cambio
-          localStorage.setItem(`order_${order.orderNumber}`, JSON.stringify(updatedOrder));
-          return updatedOrder;
-        }
-        return order;
-      });
-      return updatedOrders;
-    });
+  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    // Optimistic update
+    setOrders(prev => prev.map(order => 
+      order.id === orderId 
+        ? { ...order, status: newStatus, updatedAt: new Date().toISOString() }
+        : order
+    ));
     
-    const statusLabel = ORDER_STATUS_CONFIG[newStatus].label;
-    toast({
-      title: 'Estado actualizado',
-      description: `El pedido ha sido marcado como "${statusLabel}"`,
-    });
+    const result = await updatePedidoEstado(orderId, newStatus);
+    
+    if (result.success) {
+      const statusLabel = ORDER_STATUS_CONFIG[newStatus].label;
+      toast({
+        title: 'Estado actualizado',
+        description: `El pedido ha sido marcado como "${statusLabel}"`,
+      });
+    } else {
+      // Revert on error
+      loadOrders();
+      toast({
+        title: 'Error',
+        description: result.error || 'No se pudo actualizar el estado',
+        variant: 'destructive',
+      });
+    }
   };
 
   const filteredOrders = activeTab === 'all' 
@@ -77,12 +98,30 @@ const Orders = () => {
     return orders.filter(o => o.status === status).length;
   };
 
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-display font-bold text-foreground">Pedidos</h1>
-        <p className="text-muted-foreground mt-1">Gestiona todos los pedidos de tu pizzería</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-display font-bold text-foreground">Pedidos</h1>
+          <p className="text-muted-foreground mt-1">Gestiona todos los pedidos de tu pizzería</p>
+        </div>
+        <button
+          onClick={() => loadOrders(true)}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-pizza-red-dark transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          Actualizar
+        </button>
       </div>
 
       {/* Tabs */}
