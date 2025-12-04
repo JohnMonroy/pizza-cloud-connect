@@ -5,61 +5,33 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Pizza, Lock, Mail, Eye, EyeOff, UserPlus } from 'lucide-react';
+import { Pizza, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const { login, signUp, isLoading } = useAuth();
+  const { login, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isSignUp) {
-      if (password.length < 6) {
-        toast({
-          title: 'Error',
-          description: 'La contraseña debe tener al menos 6 caracteres',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const result = await signUp(email, password);
-      
-      if (result.success) {
-        toast({
-          title: '¡Cuenta creada!',
-          description: 'Has sido registrado correctamente',
-        });
-        navigate('/admin');
-      } else {
-        toast({
-          title: 'Error de registro',
-          description: result.error || 'No se pudo crear la cuenta',
-          variant: 'destructive',
-        });
-      }
+    const result = await login(email, password);
+    
+    if (result.success) {
+      toast({
+        title: '¡Bienvenido!',
+        description: 'Has iniciado sesión correctamente',
+      });
+      navigate('/admin');
     } else {
-      const result = await login(email, password);
-      
-      if (result.success) {
-        toast({
-          title: '¡Bienvenido!',
-          description: 'Has iniciado sesión correctamente',
-        });
-        navigate('/admin');
-      } else {
-        toast({
-          title: 'Error de acceso',
-          description: result.error || 'Email o contraseña incorrectos',
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: 'Error de acceso',
+        description: result.error || 'Email o contraseña incorrectos',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -138,27 +110,13 @@ const Login = () => {
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  {isSignUp ? 'Registrando...' : 'Accediendo...'}
+                  Accediendo...
                 </div>
               ) : (
-                <div className="flex items-center gap-2 justify-center">
-                  {isSignUp ? <UserPlus className="w-5 h-5" /> : null}
-                  {isSignUp ? 'Crear Cuenta' : 'Acceder'}
-                </div>
+                'Acceder'
               )}
             </Button>
           </form>
-
-          {/* Toggle Sign Up / Login */}
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-primary-foreground/60 hover:text-accent transition-colors text-sm"
-            >
-              {isSignUp ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}
-            </button>
-          </div>
         </div>
 
         {/* Back to site */}
