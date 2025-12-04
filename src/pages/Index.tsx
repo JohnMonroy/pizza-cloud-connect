@@ -5,23 +5,20 @@ import AboutSection from '@/components/AboutSection';
 import ContactSection from '@/components/ContactSection';
 import Footer from '@/components/Footer';
 
-// Import images as ES6 modules
-import heroImage from '@/assets/hero-pizza.jpg';
-import pizzaMargherita from '@/assets/pizza-margherita.jpg';
-import pizzaPepperoni from '@/assets/pizza-pepperoni.jpg';
-import pizzaQuattroFormaggi from '@/assets/pizza-quattro-formaggi.jpg';
-import pizzaProsciutto from '@/assets/pizza-prosciutto.jpg';
-import pizzaVegetariana from '@/assets/pizza-vegetariana.jpg';
-import pizzaDiavola from '@/assets/pizza-diavola.jpg';
+// AWS S3 bucket URL
+const S3_BUCKET_URL = 'https://pizzeria-images-676127947384.s3.us-east-1.amazonaws.com';
 
-// Map pizza IDs to images - ready for AWS S3 integration
+// Hero image from S3
+const heroImage = `${S3_BUCKET_URL}/hero-pizza.jpg`;
+
+// Map pizza IDs to S3 images
 const pizzaImages: Record<string, string> = {
-  '1': pizzaMargherita,
-  '2': pizzaPepperoni,
-  '3': pizzaQuattroFormaggi,
-  '4': pizzaProsciutto,
-  '5': pizzaVegetariana,
-  '6': pizzaDiavola,
+  '1': `${S3_BUCKET_URL}/pizza-margherita.jpg`,
+  '2': `${S3_BUCKET_URL}/pizza-pepperoni.jpg`,
+  '3': `${S3_BUCKET_URL}/pizza-quattro-formaggi.jpg`,
+  '4': `${S3_BUCKET_URL}/pizza-prosciutto.jpg`,
+  '5': `${S3_BUCKET_URL}/pizza-vegetariana.jpg`,
+  '6': `${S3_BUCKET_URL}/pizza-diavola.jpg`,
 };
 
 const Index = () => {
