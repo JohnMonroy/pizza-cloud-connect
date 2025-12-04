@@ -1,24 +1,65 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { mockOrders } from '@/data/orders';
 import { Order, ORDER_STATUS_CONFIG, OrderStatus } from '@/types/order';
 import OrderCard from '@/components/admin/OrderCard';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Pizza, Filter } from 'lucide-react';
+import { Pizza } from 'lucide-react';
 
 const Orders = () => {
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
   const { toast } = useToast();
 
+  // Cargar pedidos de localStorage y mock
+  useEffect(() => {
+    const loadOrders = () => {
+      const localOrders: Order[] = [];
+      
+      // Buscar todos los pedidos en localStorage
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('order_')) {
+          try {
+            const order = JSON.parse(localStorage.getItem(key) || '');
+            localOrders.push(order);
+          } catch (e) {
+            console.error('Error parsing order:', e);
+          }
+        }
+      }
+      
+      // Combinar con mock orders (evitar duplicados)
+      const allOrders = [...localOrders];
+      mockOrders.forEach(mockOrder => {
+        if (!allOrders.find(o => o.orderNumber === mockOrder.orderNumber)) {
+          allOrders.push(mockOrder);
+        }
+      });
+      
+      setOrders(allOrders);
+    };
+
+    loadOrders();
+    
+    // Actualizar cada 5 segundos para ver nuevos pedidos
+    const interval = setInterval(loadOrders, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-    setOrders(prev => 
-      prev.map(order => 
-        order.id === orderId 
-          ? { ...order, status: newStatus, updatedAt: new Date().toISOString() }
-          : order
-      )
-    );
+    setOrders(prev => {
+      const updatedOrders = prev.map(order => {
+        if (order.id === orderId) {
+          const updatedOrder = { ...order, status: newStatus, updatedAt: new Date().toISOString() };
+          // Actualizar en localStorage para que el cliente vea el cambio
+          localStorage.setItem(`order_${order.orderNumber}`, JSON.stringify(updatedOrder));
+          return updatedOrder;
+        }
+        return order;
+      });
+      return updatedOrders;
+    });
     
     const statusLabel = ORDER_STATUS_CONFIG[newStatus].label;
     toast({

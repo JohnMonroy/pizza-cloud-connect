@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import CustomerLogin from "./pages/CustomerLogin";
 import Checkout from "./pages/Checkout";
+import OrderTracking from "./pages/OrderTracking";
 import AdminLayout from "./layouts/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Orders from "./pages/admin/Orders";
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/customer-login" element={<CustomerLogin />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/order/:orderNumber" element={<OrderTracking />} />
               
               {/* Admin routes */}
               <Route path="/admin" element={<AdminLayout />}>
